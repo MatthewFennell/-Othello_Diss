@@ -1,0 +1,610 @@
+\documentclass[12pt,a4paper]{article}
+\usepackage{times}
+\usepackage{durhampaper}
+\usepackage{harvard}
+
+\citationmode{abbr}
+\bibliographystyle{agsm}
+
+\usepackage{amsmath,stmaryrd,graphicx}
+\usepackage{graphicx,wrapfig,lipsum}
+\usepackage[export]{adjustbox}
+\usepackage{caption}
+\usepackage{float}
+\usepackage{amsmath}
+\usepackage{hyperref}
+\usepackage{subcaption}
+\usepackage{textcomp}
+\usepackage{algorithm}
+\usepackage{multicol}
+\usepackage[noend]{algorithmic}
+\usepackage[labelfont=bf]{caption}
+
+\makeatletter
+\newcommand{\fixed@sra}{$\vrule height 2\fontdimen22\textfont2 width 0pt\shortrightarrow$}
+\newcommand{\shortarrow}[1]{%
+  \mathrel{\text{\rotatebox[origin=c]{\numexpr#1*45}{\fixed@sra}}}
+}
+\makeatother
+
+\graphicspath{{ProjectImages/} }
+
+\title{Cassio: An Artificial Intelligence Machine for Othello}
+\author{Matthew Fennell}
+\student{Matthew Fennell}
+\supervisor{Tom Friedetzky}
+\degree{MEng Computer Science}
+
+\date{}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+
+\subparagraph{Context/Background}
+Artificial Intelligence (AI) has been on the rise for years, but with the success AlphaGO has had with machine learning techniques, the concepts behind these algorithms are becoming more widely used as their potential is realised. Whilst these techniques can be readily applied to perfect information games, learning about the manner in which they operate will give an insight to where these techniques can be applied outside of the field that popularised them \cite{WinNT}.
+
+
+\subparagraph{Aims}
+The aim of this project is to implement an AI (Cassio) for Othello that plays intelligently, where at the start of the game each square on the board has an equal probability of becoming unplayable thus diversifying the board designs. The underlying algorithms behind Cassio will possess the ability to adapt to each board design so that obscure and unique board layouts do not hinder the capability of intelligent play.%
+
+\subparagraph{Method}
+Modern machine learning approaches are used to solve the problem which is ultimately a search problem. Nodes represent game states which are used to generate game trees, enabling the algorithms to determine the strategy of the game and subsequently select intelligent moves. A Graphical User Interface (GUI) is implemented in C++ using the OpenCV library for interactive game-play.
+
+\subparagraph{Results}
+
+Increasing the number of simulations for the Monte Carlo results in a more intelligent AI, however, the time cost is significant. The Minimax approach is heavily reliant on the strength of the evaluation function. Using a strong evaluation function produced from the genetic algorithm, the Minimax program consistently beats the Monte Carlo program on both standard and non-standard boards.
+
+%Evaluating performance through game-play has shown that the strength of the Monte Carlo approach directly correlates with the number of simulations performed. On the other hand, the strength of the Minimax approach is reliant on the search depth and domain knowledge, which is channelled through the evaluation function.
+
+\subparagraph{Conclusions}
+
+This project demonstrates an AI based on the Minimax algorithm that shows outstanding promise whereas the performance of the Monte Carlo algorithm is underwhelming. The use of randomly generated boards does not hinder the ability of the Minimax program because the evaluation function still captures the critical pieces of information required to play intelligently such that it is still able to defeat the Monte Carlo programs with ease.
+
+
+%Given a strong evaluation function, Minimax based techniques heavily and consistently outperform the Monte Carlo based technique. Even when competing on non-standard boards the Minimax approach continues to outperform the Monte Carlo based techniques where these non-standard board designs do not drastically affect the strategy.
+
+\end{abstract}
+
+\begin{keywords}
+Othello, Minimax, $\alpha-\beta$ Pruning, Monte Carlo, Heuristics, Random Boards, Evaluation Function, Genetic Programming
+\end{keywords}
+
+
+\section{Introduction}
+
+\subsection{The Rules of Othello}
+
+Othello is a two player perfect information board game (there is no information hidden from either player) where players take it in turns to place a disc in an empty square on the board. The game begins with four discs placed on the board (Figure \ref{fig:regular_othello_board}). Black plays first and must place a disc in a location that would cause a white disc to become trapped (horizontally, vertically or diagonally), where all discs trapped by the newly placed disc are flipped and change color. For example, in Figure \ref{fig:regular_othello_board} there are initially 4 moves available to black shown as red dots: \textit{(2,3)},  \textit{(3,2)},  \textit{(4,5)}, and \textit{(5,4)}. If black selected \textit{(2,3)}, the white disc in \textit{(3,3)} would be trapped by two black discs and subsequently turn black.
+
+Players may only place discs in locations that cause at least one opposing disc to flip. If there are no legal moves available to a player then the turn is passed to the other player and if there are no legal moves for either player then the game ends with the winner being the player with the highest number of discs in their color.
+
+\begin{figure}[ht]
+\captionsetup{justification=centering}
+\centering
+\begin{subfigure}{.5\textwidth}
+  \centering
+  \includegraphics[width=.9\linewidth]{Othello_Start}
+  \caption{Regular $8\times8$ Othello board}
+  \label{fig:regular_othello_board}
+\end{subfigure}%
+\begin{subfigure}{.5\textwidth}
+  \centering
+  \includegraphics[width=.9\linewidth]{Othello_Start_Two}
+  \caption{Randomly seeded $8\times8$ board (White to play next)}
+  \label{fig:random_othello_board}
+\end{subfigure}
+\caption{Othello Board Representation in the GUI using OpenCV, with red dots representing the moves immediately available to the active player and grey squares for unplayable locations}
+\label{fig:othello_board_variations}
+\end{figure}
+
+This project looks at a variation of Othello where non-standard boards are used. To achieve this, at the beginning of each game every empty square has an equal probability of becoming unplayable. These unplayable squares act as physical holes in the board, breaking all connections. Figure \ref{fig:random_othello_board} gives an example of what is entailed from non-standard board designs. As a result of an unplayable square in \textit{(6,3)}, White is unable to play in \textit{(7,3)}. The expectation is that these small adaptations to the regular board have the potential to significantly alter the strategy that must be adopted in order to play intelligently.
+
+\subsection{Purpose of the Project}
+
+The purpose of this project is to develop Cassio into an intelligent Othello AI that can play strategically at a high level on various board designs. This project also looks to investigate how non-standard boards can influence the strength of different techniques. There are already several Othello AIs with papers describing effective techniques that have been applied; Logistello \cite{buro1997evaluation}, BILL \cite{lee1990development} and IAGO \cite{rosenbloom1982world} are some of the most dominant, but none of these consider competing on non-standard boards. Some of the concepts used in these programs are applicable, given slight modifications so that they can perform on any board design.
+
+For small games such as Naughts and Crosses, it is possible to solve the game using a brute force approach to evaluate every potential line of play. Conversely for Chess, if every atom of the universe was evaluating leaf nodes of the game tree at nanosecond speed since the beginning of time, not all of the leaf nodes would be evaluated to date. Whilst Othello does not have as large a tree depth $(d)$ or branching factor $(b)$ as Chess, it is more similar to Chess than to Naughts and Crosses where the number of leaf nodes grows exponentially at a rate of $\theta(b^d)$, so a brute force approach is clearly not suitable. More formally, Othello falls under the complexity class of PSPACE-complete (the amount of memory required to solve it is polynomial in the input length) whereas Chess is EXPTIME-complete (decision problems with exponential runtimes). For this reason, algorithms are required to not evaluate all potential lines of play, but to quickly disregard and ignore any lines of play that are less desirable, focusing on the more promising moves.
+
+Minimax is a technique commonly applied to perfect information games, forming the basis of BILL, IAGO and Logistello. Cassio experiments with variations on Minimax and tests it against other techniques such as the Monte Carlo Tree Search approach, one which has become more popular with the success of Google's AlphaGO \cite{lee2016human}. The Monte Carlo technique develops an understanding of the game without being told the strategy, whereas Minimax relies heavily on an evaluation function, so it is of particular interest to see how the two methods compare on randomly generated boards where the design of an evaluation function becomes more difficult. 
+
+%Since this is an optimization problem, genetic programming becomes a useful method to use in an attempt to find the most desirable solution (\textit{evaluation function}), as described in \cite{frankland2015evolving}.
+
+
+\subsection{Deliverables}
+
+As a high level goal, this project aims to develop a versatile AI for Othello and to investigate the relative affect on the performance of different techniques when competing on non-standard boards. This is achieved by splitting deliverables into basic, intermediate and advanced objectives. The basic objectives are to produce a correct and complete implementation of the board mechanics, alongside a GUI to visualize the board and provide a simple interface for users to select moves. The GUI will also provide a method to allow the generation of random boards for different seeds, where a larger seed results in a higher probability for any square to become unplayable.
+The intermediate objectives are to implement an advanced AI based on modern machine learning approaches (i.e. the Monte Carlo Tree Search), with an attempt to minimise memory usage. The advanced objectives are to develop an AI that uses an evaluation function to determine each move. The evaluation function is to be improved through use of a genetic algorithm in an attempt to increase the quality of the evaluation function, as well as making it specific to the board structure being played on.
+
+
+\section{Related Work}
+
+%This section examines several previous approaches that have been applied to this problem, looking at how the algorithms and concepts used in these approaches can be applied to the specific adaptation of Othello that this project focuses on.
+
+\subparagraph*{IAGO}
+
+The logical place to start is with the AI IAGO \cite{rosenbloom1982world}. This was the first dominant AI for Othello and one of the few to release information about its implementation. At the time of IAGO, computers were not allowed to enter in Othello tournaments, however, some tournaments were organized explicitly for Othello programs. In the Santa Cruz Open Machine Othello Tournament (1981) IAGO finished top of the 20 programs that entered, remaining undefeated. 
+
+The underlying algorithm used by IAGO is recursive Minimax with $\alpha-\beta$ pruning (this will be explained in depth later on). Minimax uses an evaluation function to analyse the strength of board positions and selects the optimal move (according to the evaluation function), assuming your opponent plays optimally as well. Since IAGO was designed to compete in tournaments where time constraints were imposed on it, a technique called Iterative Deepening was used in order to estimate the depth that IAGO can search to in the time allocated. Searching to a deeper depth will result in better performance, but success does not depend on searching to the deepest depth. In the North-Western tournament (1979) the strongest programs only searched to 4 or 5 ply, whereas the weakest programs searched to an average depth of 7 or 8, showing that the strength of a program comes from an accurate evaluation function and not from computational power \cite{rosenbloom1982world}.
+
+To increase the efficiency of IAGO's search, there are two considerations that are especially relevant to this project. The first is to simply increase the efficiency of the evaluation function through smart implementation; the second is to reduce the number of nodes that require evaluating through $\alpha-\beta$ pruning. A program implemented using Minimax can only play as intelligently as its evaluation function is accurate. Subsequently, a lot of effort was taken to find the optimal evaluation function where IAGO took a genetic approach, competing different versions against itself and selecting the best.
+
+\bigskip
+\subparagraph*{IAGO's Successor}
+After IAGO, the next Othello program of note is BILL \cite{lee1990development}. The development of BILL was inspired by IAGO and incorporates many of the techniques that IAGO uses. BILL introduces an algorithm based on Bayesian learning to determine a higher quality evaluation function. BILL incorporates both Iterative Deepening with Hash and Killer tables to order the nodes more efficiently, so that the number of cutoffs from $\alpha-\beta$ pruning are increased \cite{lee1990development}.
+BILL also uses a large amount of pre-computed information to avoid calculating it at run time which would be extremely expensive. Since controlling the edge discs is critical, BILL uses a pre-computed edge table, storing information about all potential edge patterns. Unfortunately this approach is not particularly suitable to the adaptation that this project investigates. The main difference between BILL and IAGO is the use of Bayesian learning. The Bayesian learning approach determines an optimal quadratic combination for the evaluation function where the evaluation directly estimates the probability of winning \cite{lee1990development}. The enhancements used in BILL reflect in performance with BILL consistently defeating IAGO.
+
+\subparagraph*{Logistello}
+Logistello is widely considered to be one of the strongest Othello programs ever. Almost all game related programs make use of an evaluation function to determine the quality of each available move and Logistello's evaluation function is entirely based upon statistical analysis, comprising of mobility measures and board patterns \cite{buro1997evaluation}. In total, Logistello built a game tree based off approximately classifying 3 million game positions by negamaxing game results. In 1997 Logistello played 6 games against World Champion Takeshi Murakami, winning all 6 games. After this match it was clear that computer programs had surpassed the ability of humans to play Othello and consequently research into Othello started to die down. 
+
+\subparagraph*{The Monte Carlo Approach}
+
+All of the previously mentioned approaches are based off some variation of Minimax. Another technique that has been applied to perfect information games is the Monte Carlo Tree Search approach. The advantage of this approach is the lack of specialist knowledge required, consequently, it can often play poorly. When competing the Monte Carlo approach against a standard $\alpha-\beta$ technique the Monte Carlo process is consistently beaten \cite{nijssen2007playing}. Unless some major improvements are made on the Monte Carlo search process, it appears that it would continue to consistently lose to the $\alpha-\beta$ approach. However, when the Monte Carlo approach is substantialy improved, the rewards can be immense as shown by Google's AlphaGO \cite{lee2016human}.
+
+\section{Solution}
+
+\subsection{Software}
+The code for this project is written in C++. Aforementioned, the algorithms used require a substantial number of calculations due to the large number of leaf nodes in the game tree, therefore with the compiler optimisations for C++ it can be expected to process these calculations quicker than in other languages. It also provides access to tools to analyse performance such as Intel's Parallel Studio which helps find bottlenecks so that efficiency can be improved. Testing different AIs against each other requires a larger amount of computational power to simulate multiple games. Writing C++ code for this allows tests to be simulated on Durham University's  supercomputer: Hamilton, enabling tests on a larger scale.
+
+As the GUI is not the focus of this project, the OpenCV  library was used because C++ has a suitable interface with this library.
+
+The code is split up to increase its understandability by using Object Oriented Programming, implementing a Board, Player and Node class. The Board class facilitates all of the game mechanics, the Player class is responsible for selecting moves and the Node class is used to facilitate the generation of game trees. The game trees that produced by the algorithms are extremely large, so it is important to minimise the amount of data stored at each node.
+
+\subsection{Methodology}
+
+For the development of this system a SCRUM approach will be used. The main stages in the SCRUM approach are \textit{Plan, Sprint} and \textit{Evaluate}. This lends itself to being an AGILE process which caters for reflecting and re-evaluating goals. Since this project revolves around the ability of Cassio to play intelligently, meaningful tests can only be carried out once an AI has been implemented. By splitting the work up into sprints, it is possible to focus on the stage of implementing an initial AI or improving a pre-existing algorithm during each sprint. Evaluating the algorithm after the sprint should give an insight as to where its strengths and weaknesses lie which are used as the focus point for planning the next sprint.
+
+\subsection{Algorithms}
+
+\subsubsection{Monte Carlo Tree Search}
+
+%The first algorithm is based on the Monte Carlo Tree Search approach. Monte Carlo methods have commonly been used for games with perfect information, but are now becoming more widely used in other areas.
+
+
+The Monte Carlo algorithm is divided up into four distinct phases: \textit{Selection, Expansion, Simulation,} and \textit{Backpropagation} which are repeated several times to produce a game tree \cite{archer2007analysis}. Every node in the tree represents a board state. The root of the tree always represents the current board state and  for each move available at any state there is an edge to a child node, where the edge represents the action taken to get to the new state (Figure \ref{fig:monte_carlo_tree_diagram}). Each simulation updates the game tree and improves the understanding of the AI about the impact each available move has; after a specified number of simulations have been processed the algorithm determines which of the available moves it considers most desirable.
+
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[scale=0.25]{MonteCarloTree}
+\caption{The four stages in the Monte Carlo Tree Search procedure \protect\cite{browne2012survey}.}
+\label{fig:monte_carlo_tree_diagram}
+\end{figure}
+
+\subparagraph{Selection}
+
+The first stage of the algorithm is selecting a child node to visit. There are several different methods for deciding which child node to select, but a very basic implementation is to select the node that has been visited the least so far. If this leads to a node that has been visited in a previous simulation, continue selecting children until an unvisited node is reached or the game ends. 
+
+\subparagraph{Expansion}
+
+Once an unvisited node is reached, this node is expanded. This means that it determines all possible moves from that board state and produces a child node for each available move.
+
+\subparagraph{Simulation}
+
+After having expanded a node, legal moves are chosen randomly until the end of the game.
+
+\subparagraph{Backpropagation}
+
+Once the game has finished and the winner has been determined, backpropagate up the game tree, updating win and visit counts on nodes in the selected path.
+
+\bigskip
+
+
+This four stage procedure is repeated hundreds or thousands of times, subject to any time constraints, with every simulation updating the selected nodes win and visit counts. At the end of the simulation the algorithm selects the child node of the root with the highest win rate as the next move. However, this is a very basic Monte Carlo algorithm and it can be done significantly better. The search problem at hand directly correlates to the Multi-Armed Bandit Problem \cite{auer2002finite}, as there are a choice of available moves and it is not obvious which move has the highest pay-off. By reducing this problem to the Multi-Armed Bandit Problem, a much more effective selection policy can be employed. 
+
+Instead of selecting the child that has been selected the least, the idea of exploitation and exploration are balanced. Exploitation refers to focusing on moves that have high win rates whereas exploration emphasises exploring nodes that have not been selected many times. Through balancing out exploration and exploitation, the search is pruned such that stronger moves are examined more closely, but the supposed weaker moves are not discounted entirely.
+
+When selecting a child node, instead of selecting the node with the highest win rate, the most \textit{urgent} child node is selected, which combines the notion of exploitation and exploration. For any node, the most urgent child is the child node with the largest Upper Confidence Bound (UCB) \cite{browne2012survey}. This UCB is given by:
+
+\begin{equation} \label{eq1}
+\begin{split}
+UCB & = \overline{X_j} + C\sqrt{\frac{2\ln n}{n_j}}\\
+\end{split}
+%\textnormal{\cite{browne2012survey}}
+\end{equation}
+
+\begin{itemize}
+     \item $\overline{X_j}$ represents the win rate of node $j$ (number of wins / number of visits)
+     \item $n$ represents how many times the parent node has been visited 
+     \item $n_j$ represents how many times the choice of node $j$ has been selected
+     \item $C$ is a tunable parameter, balancing \textit{exploitation} ($\overline{X_j}$) vs \textit{exploration} ($\sqrt{\frac{2\ln n}{n_j}}$)
+\end{itemize}
+
+The constituent parts of this equation are derived from a complex mathematical optimisation of the Multi Armed Bandit Problem, in which there is a gambler and lottery machines $S_0...S_n$ with expected returns of $X_0...X_n$ (unknown to the gambler). The gambler must select which machines to play and how many times to play each machine in order to maximise his return.
+
+This derived equation balances out exploiting good moves against exploring moves that have not been selected as much. If a move has a high win rate, then the value of $\overline{X_j}$ is larger, increasing the UCB for that node and increasing the chances of that node being selected. Whereas, if a node has not been tested much, then the value of $n_j$ is small, causing the exploration weighting to have a larger affect on the UCB value.
+
+By applying this procedure logarithmic regret is experienced \cite{auer2002finite}, which relates to the estimated loss from selecting non-optimal moves; this has been proven to be asymptotically optimal \cite{lai1985asymptotically}. When a node has $n_j$ = 0, then the UCB for that node is set to $\infty$ to ensure that all nodes are selected at least once \cite{browne2012survey}. 
+
+%One of the extremely unique parts of the Monte Carlo algorithm is that it requires no domain knowledge or evaluation functions as it figures out strong moves by itself, making this algorithm of particular interest to this project. Since it discovers its own stategy without being told how to play, this algorithm should adapt extremely well to all board designs. The algorithm also does not need to evaluate any intermediate states, which can lead to the algorithm discovering unusual and unique strategies to win, if such strategies exist \cite{browne2012survey}.
+
+Monte Carlo is selected as a technique because of its unique nature. Unlike standard game playing techniques, the Monte Carlo approach uses no method of evaluating the strength of a given board position but instead calculates the relative strength of available moves through UCBs. Since devising an evaluation function for unpredictable boards becomes trickier and results in a less accurate function being used, a technique that does not rely on the accuracy of an evaluation function may give it an edge over techniques using a poor quality evaluation function. As the Monte Carlo technique discovers its own stategy without being told how to play, this algorithm should adapt extremely well to all board designs. The algorithm also does not need to evaluate any intermediate states, which can lead to the algorithm discovering unusual and unique strategies to win, if such strategies exist \cite{browne2012survey}.
+
+As more and more simulations are played, there comes a point where running more simulations has a negligible effect on the decision made by the AI. However, running more simulations has a cost in both time and memory which proved to be one of the major implementation issues. Running more simulations results in the production of a larger game tree and as a result  if the program is designed for machines with small amounts of memory, then the number of simulations will be limited by this factor.
+
+%Through extensive testing this project aims to gain an understanding of when it is acceptable to stop running more simulations and to explore any correlation between the board size/structure and the required number of simulations to reach this point.
+
+\subsubsection{Minimax}
+
+Minimax is a technique applied to two player zero-sum games, where the two players are denoted as `Min' and `Max'. The main idea of the approach is to minimise the maximum `damage` that the other player can inflict. It models the game from the Max players point of view and assumes that the Min player plays optimally to minimise the score that the Max player can achieve. To put a numerical value on the quality of a board state or to calculate the amount of potential damage your opponent could inflict, an evaluation function is used to analyse the board. This comprises of various board features such as: \textit{Disc Stability, Mobility, X-Squares} and \textit{Disc Count}.
+
+\subparagraph{Stability}
+
+Stability is an extremely important concept in Othello. A disc is stable if the opponent cannot flip it for the rest of the game. Gaining control of stable edges is paramount to winning as they can be used to gain control of the central squares. Two extremely potent Othello AIs Iago \cite{rosenbloom1982world} and BILL \cite{lee1990development} use pre-computed edge tables to evaluate the edge positions as there are $3^8$ potential edge configurations on a standard $8\times8$ board, although this project is not able to use this approach with the boards being randomly generated. 
+
+\subparagraph{Mobility}
+
+The Othello program IAGO has two forms of mobility: current mobility and potential mobility \cite{rosenbloom1982world}. Current mobility refers to how many moves are immediately available to the player. This is one of the most important strategic concepts to play by as the player with the most mobility can dictate the direction of the game. If one player can limit the current  mobility of their opponent whilst maintaining their own, it greatly increases the chances of their opponent being forced into making a poor move.
+
+Potential mobility focuses on the idea of placing discs that will provide mobility in the future. The machine IAGO measures potential mobility by measuring the number of frontier discs (discs adjacent to empty squares) that the opponent has  \cite{rosenbloom1982world}. BILL uses an additional measure of mobility which is \textit{sequence penalty}. The idea is that it is detrimental to have long sequences of discs in your own colour as they inhibit mobility, especially if they are frontier discs \cite{lee1990development}.
+
+\subparagraph{X-Squares and Disc Count}
+
+X-Squares are the squares diagonally adjacent to the corner squares. With the corner squares being the most powerful squares in the game, X-Squares are conversely the least desirable squares as they act as a stepping stone for the opponent to take the corner squares. It is important to try and force your opponent to take the X-Squares so that you are able to capture the corners. The disc count heuristic is considered only at the end of the game and simply refers to the number of discs in your colour.
+
+\bigskip
+
+The Minimax algorithm uses an evaluation function that incorporates a combination of these board heuristics to provide an accurate estimate about the quality of different board states. The algorithm produces a game tree of all possible lines of play to a specified depth, where all of the leaf nodes are assigned a numerical value based on this evaluation function. Figure \ref{fig:minimax_diagram} provides a graphical representation of a basic Minimax example (the non-leaf nodes are given a numerical value for clarity of explanation). The nodes represent board states and the number inside represents the evaluated result of that board state. This example looks at the game from the Max players point of view who is trying to maximise the number within the nodes, whereas the Min player is attempting to minimise the value that the Max player can obtain. 
+
+The numbers in red display which path would be taken by the Minimax algorithm in this example. If the Max player chose the central node \textit{39}, then the minimising player would select \textit{3}, as \textit{3} is smaller than \textit{24}. However, if the Max player selected the right node \textit{19}, then the smallest value the Min player could select is \textit{7}, which is larger than \textit{3}. Whilst selecting the central node may result in a stronger board state than selecting the right node in a  1-ply lookahead, it is not optimal when looking further ahead in the game. In this example \textit{24} would be the best outcome the Max player could hope to achieve, but Minimax assumes both players play optimally, so in this case the \textit{7} is the best value that the Max player could possibly achieve.
+
+\begin{figure}[H]
+\captionsetup{justification=centering}
+\centering
+\includegraphics[scale=0.25]{Minimax}
+\caption{Visualisation of the MiniMax algorithm for a basic evaluation function, with the numbers in red representing the chosen path}
+\label{fig:minimax_diagram}
+\end{figure}
+
+\subsubsection*{Alpha-Beta Pruning}
+One of the issues with the Minimax approach is that all of the leaf nodes must be evaluated. When doing a 1 or 2 ply lookahead it is not a significant issue, but the tree grows at rate of $\theta(b^d)$, where $b$ and $d$ represent the braching factor and tree depth respectively. On a regular $8\times8$ board, Othello has an average branching factor of 9.9 meaning that searching to a high depth is computationally challenging \cite{rosenbloom1982world}. A key aspect of the Minimax algorithm is searching to as large a depth as possible, but since the computation required to evaluate all leaf nodes at a larger depth grows exponentially it is imperative to optimise the search. The addition of $\alpha-\beta$ pruning aims to minimise the number of nodes that require evaluating. By remembering the best and worst moves found so far, the algorithm avoids traversing further down lines of play that are never going to be selected, with the procedure shown in Algorithm \ref{alg:alpha_beta}. The algorithm is initially called by alpha\_beta(root, depth, -$\infty$, +$\infty$, TRUE). $\alpha$ represents the maximum value the Max player can be guaranteed to obtain and $\beta$ represents the minimum value that the Min player can be assured of. The algorithm starts with $\alpha = -\infty$ and $\beta = +\infty$ so that both players begin with the worst possible score.
+
+\begin{algorithm}[H]
+\begin{algorithmic}[1]
+
+\STATE \textbf{function} alpha\_beta(node, depth, $\alpha$, $\beta$, maximising\_player)
+\IF {depth == 0 or game\_finished}
+	\STATE \textbf{return} node$\rightarrow$evaluate()
+\ENDIF
+\IF {maximising\_player}
+	\STATE \textit{find the value of the move the maximises the evaluation function}
+	\STATE v = -$\infty$
+	\FOR {each child of node}
+		\STATE v = max(v, alpha\_beta(child, depth-1, $\alpha$, $\beta$, FALSE))
+		\STATE $\alpha$ = max($\alpha$,v)
+		\IF {$\beta \leq \alpha$}
+			\STATE \textit{terminate the search down this path early}
+			\STATE \textbf{break}
+		\ENDIF
+	\ENDFOR
+	\STATE \textbf{return} v
+\ELSE
+\STATE \textit{find the value of the move the minimises the evaluation function}
+	\STATE v = +$\infty$
+	\FOR {each child of node}
+		\STATE v = min(v, alpha\_beta(child, depth-1, $\alpha$, $\beta$, TRUE))
+		\STATE $\beta$ = min($\beta$, v)
+		\IF {$\beta \leq \alpha$}
+			\STATE \textit{terminate the search down this path early}
+			\STATE \textbf{break}			
+		\ENDIF	
+	\ENDFOR
+	\STATE \textbf{return} v
+
+\ENDIF
+\end{algorithmic}
+\caption{The Alpha-Beta Pruning algorithm}
+\label{alg:alpha_beta}
+\end{algorithm}
+
+%Figure \ref{fig:alpha_beta_diagram} shows an improvement to Minimax, known as $\alpha$-$\beta$ which aims to decrease the number of nodes that require evaluating.
+
+%The algorithm begins at the leaf nodes and in this example begins at node \textit{e}. It evaluates this board state to a value of 9, so now the Min player knows it will never select a value greater than 9 at node \textit{b}. It then evaluates node \textit{f} to obtain a value of 6 which is smaller than 9, so the Min player knows the minimum value it can select is 6 at node \textit{b}. This propagates up to the top of the tree such that the Max player knows the worst it can do is achieve a 6 by selecting node \textit{b}.
+
+%The algorithm now evaluates node \textit{g} to a value of 3. This means the Min player knows that the value at node \textit{c} will be less than or equal to 3. Subsequently the Max player knows that it can achieve a score of at least 6 by taking the left node, so it will never select the central node if the best it can achieve down that route is 3. This means that no more children of node \textit{c} need to be evaluated, so node \textit{h} is never evaluated. Node \textit{i} is evaluated next and has a value of 8. The Min player knows that the smallest value node \textit{d} can be is less than or equal to 8. This is larger than 6, so the Max node could potentially do better down this route so we keep evaluating. Node \textit{j} is evaluated to be 4, so the Min player knows the value at node \textit{d} can be at most 4 but as the Max player can achieve a 6 going down the left no more children of node \textit{d} need to be calculated. This small example shows how Alpha-Beta pruning optimises the search tree, showing that the number of static evaluations required (\textit{nodes in red}) has decreased from originally requiring to evaluate all of the leaf nodes.
+
+%\begin{figure}[H]
+%\centering
+%\includegraphics[scale=0.25]{AlphaBeta}
+%\caption{Visualisation of the Alpha-Beta algorithm}
+%\label{fig:alpha_beta_diagram}
+%\end{figure}
+
+\subsection{The Evaluation Function}
+This section describes precisely how the evaluation function used by the Minimax with $\alpha-\beta$ pruning is designed and the implementation details of the constituent parts.
+
+\subsubsection*{Stable discs}
+Stable discs are paramount to winning Othello, so it is extremely important to identify which discs are stable to allow the program to capture as many stable discs as possible. However, it is a non-trivial problem to determine whether or not a disc is stable. A disc is known to be stable if in each of the 4 directions ($\shortarrow{2} \shortarrow{1} \shortarrow{0} \shortarrow{7}$) at least one of the following conditions are met:
+
+\begin{enumerate}
+	\item The lane is completely full of discs
+	\item The disc is adjacent to the edge of the board or an unplayable square
+	\item The disc is adjacent to a stable disc of the same colour
+\end{enumerate}
+
+
+% with Figure \ref{fig:Stability_Conditions} showing various examples of the circumstances under which discs can be considered stable.
+
+\begin{figure}[ht]
+\centering
+\begin{subfigure}{.33\textwidth}
+  \centering
+  \includegraphics[width=.9\linewidth]{Stable_One}
+  \caption{Condition 1}
+  \label{fig:stability_conditions_one}
+\end{subfigure}%
+\begin{subfigure}{.33\textwidth}
+  \centering
+  \includegraphics[width=.9\linewidth]{Stable_Two}
+  \caption{Condition 2}
+  \label{fig:stability_conditions_two}
+\end{subfigure}
+\begin{subfigure}{.33\textwidth}
+  \centering
+  \includegraphics[width=.9\linewidth]{Stable_One_Two_Three}
+  \caption{Conditions 2 and 3}
+  \label{fig:stability_conditions_three}
+\end{subfigure}
+\caption{Conditions for disc stability}
+\label{fig:Stability_Conditions}
+\end{figure}
+
+If these criteria are satisfied in all 4 directions then the disc is certainly stable. These three diagrams in Figure \ref{fig:Stability_Conditions} illustrate various conditions under which discs can be considered stable. All three diagrams are positions that are unobtainable through standard game play but are explicitly made this way to show the conditions required for stability. Figure \ref{fig:stability_conditions_one} shows how stability can be obtained through condition 1 exclusively. In this example, the disc in location \textit{(3,3)} is stable since all 4 of the lanes that it lies in are full of discs. This is because no further discs could ever be placed in a position that would result in the flipping of \textit{(3,3)}.
+
+Figure \ref{fig:stability_conditions_two} shows how a disc can be stable with regards to the second condition. Condition two is satisfied in the three vertical directions ($\shortarrow{2} \shortarrow{1} \shortarrow{7}$) since the disc in \textit{(0,4)} is adjacent to the edge of the board in each of these three directions. The remaining direction to consider is the horizontal direction. Since the square \textit{(0,3)} is unplayable then condition 2 is satisfied in this direction as well. Seeing that at least one of the three conditions is met in all 4 directions (condition two each time in this case), the disc in \textit{(0,4)} can be considered stable.
+
+Figure \ref{fig:stability_conditions_three} shows a combination of conditions 2 and 3. The disc in \textit{(0,4)} is stable for the same reasons as described for Figure \ref{fig:stability_conditions_two}. As it is known that the disc in \textit{(0,4)} is stable for White, this information can be used to discover more stable discs. When looking at disc \textit{(0,5)} it is clear to see that it is adjacent to the top of the board, so condition two is satisfied in the three vertical directions, leaving just the horizontal direction to consider. Since the disc in \textit{(0,4)} is stable, the disc in \textit{(0,5)} is adjacent to a stable disc of the same colour in the horizontal direction. Subsequently condition three is now satisfied in the horizontal direction and the disc in \textit{(0,5)} can now be considered stable. The disc in \textit{(1,4)} is considered next. When looking in the horizontal direction and one of the diagonal directions ($\shortarrow{7}$) it is clear to see that condition two is fulfilled due to adjacent unplayable squares. In the two remaining directions ($\shortarrow{2} \shortarrow{1}$) condition 3 is satisfied since from previous examination it is known that the discs in \textit{(0,4)} and \textit{(0,5)} are stable. 
+Consequently the disc in \textit{(1,4)} is  stable since condition two or three is satisfied in all four directions.
+
+However, it is worth noting that the order in which discs are considered is important. The disc in \textit{(1,4)} is dependent on the discs in \textit{(0,5)} and \textit{(0,4)} being stable and the disc in \textit{(0,5)} is dependent on the disc in \textit{(0,4)} being stable. If  the disc in \textit{(1,4)} is considered before the other two then it could not be considered stable because condition three would not be satisfied. Due to these dependencies it is essential to examine discs in a logical order. It would be possible to guarantee finding all stable discs by repeatedly looping through the board several times and terminating after a loop discovered no more stable discs, but this would be inordinately expensive on the processing time, prohibiting searching to a sufficient depth in any reasonable amount of time. 
+
+The process, as shown in Figures \ref{fig:order_one} - \ref{fig:order_three} begins by checking to see if the corner squares are occupied, since if captured they are inherently stable due to condition 2 and it is especially rare for any stable discs to exist without the corners being taken first. The remaining edge squares are now examined. Each of these squares are checked twice, either from left to right and right to left or top to bottom and bottom to top. It is necessary to loop through each direction because of the dependency relationship between squares. It is common for a chain reaction of stability to run from one corner to another which can be missed if you only traverse in a single direction, as illustrated by Figure \ref{fig:order_example}. If these are examined from top to bottom then all of the white discs are considered stable. However, if examined from bottom to top, then the white disc in \textit{(5,0)} is not stable, resulting in \textit{(4,0)} not being stable and so on, such that only the disc in \textit{(0,0)} would be considered stable. As a result, five stable edge discs are not identified, significantly decreasing performance.
+The interior discs are only examined once because they are not as vital to winning compared to the edge discs, and traversing through the interior squares multiple times would use up a significant amount of processing time that could be better spent identifying more important features.
+
+
+\begin{figure}[ht]
+\centering
+\begin{subfigure}{.45\textwidth}
+  \centering
+  \includegraphics[width=.8\linewidth]{Check_Stable_One}
+  \caption{Step 1}
+  \label{fig:order_one}
+\end{subfigure}%
+\begin{subfigure}{.45\textwidth}
+  \centering
+  \includegraphics[width=.8\linewidth]{Check_Stable_Two}
+  \caption{Step 2}
+  \label{fig:order_two}
+\end{subfigure}
+\begin{subfigure}{.45\textwidth}
+  \centering
+  \includegraphics[width=.8\linewidth]{Check_Stable_Three}
+  \caption{Step 3}
+  \label{fig:order_three}
+\end{subfigure}
+\begin{subfigure}{.45\textwidth}
+  \centering
+  \includegraphics[width=.8\linewidth]{Ordering_Example}
+  \caption{Ordering example}
+  \label{fig:order_example}
+\end{subfigure}
+\caption{The Sequence of identifying stable discs}
+\label{fig:check_stability}
+\end{figure}
+
+Overall, this process helps identify which discs are stable and separates them into three categories which all comprise part of the evaluation function: stable corners discs, stable edge discs adjacent to corner squares, and other stable edge discs.
+
+%\begin{itemize}
+%	\item Stable corner discs
+%	\item Stable edge discs adjacent to corner squares
+%	\item Other stable edge discs
+%\end{itemize}
+
+\subsubsection*{Mobility}
+Mobility is regarded as one of the most important aspects to consider in order to play intelligently and comes in two forms: current mobility and potential mobility \cite{sannidhanam2015analysis}, with Cassio's evaluation function using both forms. Current mobility is simple to calculate yet computationally demanding and refers to the number of moves immediately available to the active player. Potential mobility is used to consider mobility later on in the game. The manner in which potential mobility is calculated is inspired from IAGO \cite{rosenbloom1982world}. It is determined by summing up the number of empty squares adjacent to discs of the opposing player. If a square is adjacent to two discs of the opposing player then it is counted twice \cite{rosenbloom1982world}. 
+
+%CHANGE
+Figure \ref{fig:potential_mobility} shows the direction each square needs to consider in order to minimise the time spent checking neighbouring squares for discs of the opposing player. For example, if location \textit{(3,1)} is empty, it does not need to consider if any the squares in \textit{(2,0), (3,0)} or \textit{(4,0)} contain a disc of the opposing player as it is impossible to obtain a disc behind those squares in order to consider the empty square in \textit{(3,1)} to be a potential move for future. The central 16 squares must examine all directions.
+
+\begin{figure}[H]
+\captionsetup{justification=centering}
+\centering
+\includegraphics[scale=0.25]{Potential_Mobility}
+\caption{Potential mobility analysis, showing the direction each square must  check for neighbouring discs of the opponent}
+\label{fig:potential_mobility}
+\end{figure}
+
+\subsubsection*{X-Squares and Disc Count}
+
+X-Squares are the least desirable squares on the board and as such result in a penalty to whichever player has a disc in any of the X-Square locations (assuming the disc is unstable). The disc count heuristic has minimal importance until each player has very few moves left, at which point the weighting of disc count is significantly increased. Ultimately disc count is the determining factor in deciding the winner, so a brute force approach is taken when it is feasible to evaluate all remaining paths of play, where the only piece of information it considers are the final disc counts.
+
+\subsubsection*{Producing the Numerical Value}
+
+A combination of the aforementioned heuristics are used to produce a numerical representation of any board layout from the perspective of a given player. One of the main issues this approach ran into was relativity. The evaluation function may identify a board position to be strong for player $A$, but even if that board position was stronger for player $B$, player $A$ still considered it a favourable position. The solution to this is, for any board position the evaluation function calculates the difference between the numerical value for the respective players so that players are not necessarily competing to have what is considered a strong position, but instead a position stronger than their opponents.
+
+\subsection{Genetic Programming}
+
+The strength of the Minimax approach relies on the quality of the evaluation function. Since devising an accurate evaluation function by hand is difficult, humans let computers compete against themselves to identify what results in a high quality evaluation function. To search for the optimal parameter set, a genetic approach has been taken, applying the concept of \textit{Survival of the Fittest}. \cite{eskin1999genetic}. Algorithm \ref{alg:genetic} describes the procedure followed by the genetic algorithm.
+
+\begin{algorithm}[H]
+\begin{algorithmic}[1]
+
+\STATE \textbf{Input:} Population Size \textit{N}, Number of Generations \textit{T}
+\STATE G $\leftarrow$ Generate\_Random\_Population(N)
+\FOR{$i=0$ to $T$}
+	\STATE G $\leftarrow$ Round\_Robin\_Tournament()
+	\STATE G $\leftarrow$ Select\_Next\_Generation()
+	\STATE G $\leftarrow$ Crossover (\textit{5\% chance of mutation})
+	\STATE G $\leftarrow$ Transfer\_Generations()
+\ENDFOR
+\end{algorithmic}
+\caption{The Genetic algorithm}
+\label{alg:genetic}
+\end{algorithm}
+
+A genetic approach is used because it allows Cassio to devise its own evaluation function in a manner that caters to random boards. After the generation of a random board, applying this genetic procedure and having the AIs compete against themselves should result in discovering which aspects of the evaluation function are more influential to winning. Logistello improved and perfected its performance by competing against itself over 100,000 times \cite{buro1997evaluation}. Often after several generations, the `gene pool' (distribution of evaluation functions) can become extremely small, with little variation. This causes any further generations to have a minimal effect on improving the evaluation function. The 5\% mutation probability attempts to increase the variety of evaluation functions within the population.
+
+\subsection*{Testing}
+
+Several testing stages occurred through out the project. Following the Agile development methodology provides opportunity for testing to be performed at the end of each sprint, examining two main areas: Validation (is the right system being built?) and Verification (is the system being built right?). The program was verified several times throughout the development of the system, with Object-Orientation providing a suitable environment to test various aspects of the system individually and rapidly identify bugs within the system. 
+Validation occurred at the end of the project whereby a series of Unit Tests are performed, ensuring that all units of the program provide the correct functionality. The system was then manually integrated and tested in its entirety to ensure that all the components worked together. The final stage of validation was User Acceptance Testing, where various different users trialled the system, ensuring that the system worked as specified and required.
+
+
+\section{Results}
+
+\subsection{Test Setups}
+
+There are a large number of factors that can be investigated with this project and it is impractical to test all combinations. The performance of the Monte Carlo approach is investigated by looking at the effect of varying the number of simulations, through a round robin tournament. The effectiveness of the genetic algorithm is evaluated through another round robin tournament, investigating whether running the genetic algorithm for a larger number of generations results in stronger performance. After obtaining an evaluation function from this process, the Minimax approach competes against itself whilst searching to different search depths. Finally, the Monte Carlo algorithm competes against the Minimax algorithm on both standard and randomly generated boards to investigate the influence of randomly generated boards on the separate techniques.
+
+%\begin{itemize}
+%	\item The effect of varying the number of Monte Carlo Simulations
+%	\item The enhancement on the evaluation function produced by the Genetic algorithm
+%	\item The effect of searching to a deeper depth with Minimax
+%	\item A comparison between Monte Carlo and Minimax based algorithms
+%	\item The relative performance of Monte Carlo and Minimax techniques on randomly generated boards
+%\end{itemize}
+
+\subsection{Monte Carlo}
+
+The first test scenario consisted of Monte Carlo programs competing against one another.  One of the Monte Carlo programs ($A$) fixes the number of simulations used (\textit{200}) and the opposing Monte Carlo program ($B$) uses a varying number of simulations. Figure \ref{fig:monte_varying} shows how the number of wins varies as the programs compete against each other. Since the Monte Carlo approach is probabilistic, several games are carried out to decrease the variance in the results, with each program playing a total of 100 games (50 as each colour). These values for the number of simulations and the total number of games played are dictated by the time constraints of performing the tests; given more time these values could have been increased.
+
+Figure \ref{fig:monte_varying} clearly shows that as the number of simulations for program $B$ increases, program $B$ starts winning a higher proportion of the games, showing how the level of performance of a Monte Carlo program directly correlates to the number of simulations performed. After approximately 2000 simulations, increasing the number of simulations for program $B$ has a reduced affect on the frequency with which $B$ beats $A$, with the point at which simulations can be terminated being dependent on the strength of the opposing player.
+
+The second experiment incorporated the Monte Carlo programs competing against each other in a round robin format. A population of 8 Monte Carlo programs is used with each program using a different number of simulations. Each program plays 140 games each, competing 20 times against each other program. Figure \ref{fig:monte_round_robin} shows how many wins each program achieved across the tournament. Ideally a larger population size would have been used, but it was necessary to repeat games several times to reduce the variation, so the size of the population was again limited by time constraints since the runtime is exponential in the population size.
+
+The results shown in Figure \ref{fig:monte_round_robin} are as expected. Programs that use a larger number of simulations win a much larger proportions of their games, with the strongest program winning 87\% of its matches compared to the weakest program winning only 6\%. The relationship is not perfectly linear which is likely to be a result of only performing 140 games per result; testing a larger sample of games per result would be expected to produce a set of results with less variance and a stronger linear relationship.
+
+\begin{figure}[ht]
+\captionsetup{justification=centering}
+\centering
+\begin{subfigure}{.5\textwidth}
+  \centering
+  \includegraphics[width=.9\linewidth]{Monte_Results_One}
+  \caption{Varying the number of simulations}
+  \label{fig:monte_varying}
+\end{subfigure}%
+\begin{subfigure}{.5\textwidth}
+  \centering
+  \includegraphics[width=.9\linewidth]{Monte_Results_Two}
+  \caption{Number of wins achieved by each AI after a round robin tournament}
+  \label{fig:monte_round_robin}
+\end{subfigure}
+\caption{Monte Carlo results when competing against itself}
+\label{fig:Monte_Carlo_Results}
+\end{figure}
+
+\subsection{Genetic Algorithm Performance}
+
+Since the optimal relative weightings of the evaluation function are unknown, the genetic algorithm is used before any Minimax testing took place so that the Minimax tests can be performed with a strong evaluation function. Algorithm \ref{alg:genetic_compete} describes the test procedure to evaluate the effectiveness of the genetic approach, with the results of the approach taken shown in Figure \ref{fig:genetic_results}.
+
+\begin{algorithm}[H]
+\begin{algorithmic}[1]
+
+\STATE \textbf{Input:} Population Size \textit{N}, Number of Generations \textit{G}
+\FOR{$i=0$ to $G$}
+	\STATE Produce evaluation function $E_i$ from a genetic algorithm on $G$ generations
+\ENDFOR
+
+\FOR{$i=0$ to $G$}
+	\FOR{$j=i$ to $G$}
+		\STATE Compete $E_i$ against $E_j$
+	\ENDFOR
+\ENDFOR
+
+\end{algorithmic}
+\caption{Genetic Algorithm test procedure}
+\label{alg:genetic_compete}
+\end{algorithm}
+
+
+The results shown in Figure \ref{fig:genetic_raw} show a large increase in the proportion of wins from 0 generations to 5 generations, which is most likely due to the poor quality evaluation functions that are quickly removed from the earlier generations. However, there is not a strong correlation between the number of generations and the number of wins. To experience a significant improvement after running for several generations it is necessary to use a substantially larger population size with a far wider `gene pool'. There is no distinguishable difference between using a population size of 6 or 8, but these matches are only carried out between programs using the same population size. When looking at the graph universally, a logarithmic relationship can be seen as illustrated in Figure \ref{fig:genetic_annotated}. It is possible that the effectiveness of the genetic algorithm is proportional to the logarithm of the number of generations used.
+
+% The weightings produced by the highest quality evaluation are shown in Table \ref{table:heuristic_weightings}.
+
+
+
+%\begin{table}[h!]
+%\centering
+%\caption{Heuristic Weightings}
+%\begin{tabular}{c c c c} 
+%\hline
+%\hline
+%	 Stable Corner & + 5241  & Immediate mobility & 921\\ 
+%	 Stable Edge Adjacent to Corner & + 9975 & Potential mobility & 522\\  
+%	 Remaining Stable Edge & + 1958 & X-Square Penalty & -478\\
+%	 Stable Internal & + 2497 & Disc Count & 309\\
+%\hline
+%
+%\end{tabular}
+%\label{table:heuristic_weightings}
+%\end{table}
+
+\begin{figure}[ht]
+\centering
+\begin{subfigure}{.5\textwidth}
+  \centering
+  \includegraphics[width=.9\linewidth]{Genetic_Results}
+  \caption{The number of wins achieved by each generation}
+  \label{fig:genetic_raw}
+\end{subfigure}%
+\begin{subfigure}{.5\textwidth}
+  \centering
+  \includegraphics[width=.9\linewidth]{Genetic_log_Results}
+  \caption{Analysis of results}
+  \label{fig:genetic_annotated}
+\end{subfigure}
+\caption{Genetic algorithm results from performing a round robin tournament}
+\label{fig:genetic_results}
+\end{figure}
+
+\subsection{Performance of Minimax}
+
+The first aspect of the Minimax algorithm to investigate is the effect on performance of searching to a deeper depth. This is tested on depths of 1 to 6 with each program using the same evaluation function as described previously. The results are as expected, with the program searching to a deeper depth winning every time. The difference in computation time from searching to a depth of 1 does not vary much compared to searching to a depth of 5. Only after searching to a depth of 6 or greater are significant time issues experienced, such that searching to a depth of 7 is infeasible.
+
+The next stage of tests consisted of comparing Monte Carlo based programs against Minimax based programs. Testing this on the regular $8\times8$ board results in the Minimax based program winning 100\% of the matches when searching to a depth of 5. Even when the Minimax program only searches to a depth of 2 or 3 it still consistently beats the Monte Carlo based program unless impractically large numbers of simulations are used (\textit{50,000+}). The total time taken to select all moves for Monte Carlo program is in excess of 350 seconds, compared to Minimax taking less than 1 second. This is when performing on non-optimized implementations, where the room for improvement on the Minimax approach is larger than for the Monte Carlo approach. This further highlights the time efficiency of the Minimax technique. After analysing the mobility levels over 100 games using a Minimax search depth of 5, the Minimax program has an average of 10.2 moves available per turn compared to 3.3 of the Monte Carlo program, regardless of the number of simulations used, highlighting the importance of mobility throughout the game. 
+
+\subsection{Performance on Randomly Generated Boards}
+
+The final area of interest is to investigate how the relative performance levels of Monte Carlo and Minimax based algorithms compare when competing on randomly generated boards. When random boards are created with the maximum seeding (20\% chance per square), the Minimax programs continues to consistently beat the Monte Carlo based programs until as before, the Minimax search depth is decreased to just 2 or 3 and the number of simulations for the Monte Carlo increased massively, suffering from the same time issues as before. For any seed used, the Minimax approach continued to outperform the Monte Carlo approach, showing how the use of random boards appears to have a minimal affect on game-play.
+
+\section{Evaluation}
+
+\subsubsection*{Suitability of Approach}
+
+Before beginning to implement any of the software, it was necessary to decide on design aspects such as the programming language and development methodology. The decision to use C++ as the programming language has proven to be an excellent choice as it provided the luxury of running the more CPU intensive tests (Monte Carlo based methods) on Hamilton as well as facilitating an Object-Oriented approach. This provided a method for data abstraction whilst also making it far simpler to extend the project further. Running tests on Hamilton was especially applicable to the Monte Carlo based programs due to the probabilistic nature of this technique, making it necessary to simulate several games to reduce uncertainty in the results. 
+
+The SCRUM approach taken has both advantages and disadvantages. The nature of sprint cycles allowed for rapid implementation of various sections. However, this often resulted in a lack of emphasis on documentation and a larger proportion of bugs produced, especially related to program memory. To resolve these issues, sprints are taken with an aim to solve purely memory issues when necessary, alongside frequent testing to identify any significant bugs. Weekly supervisor meetings aided in keeping the project focused and ensuring that the project was heading the correct direction.
+
+\subsubsection*{Strengths and limitations of the project}
+
+After looking at the results from competing programs against each other it is easy to see where the strengths lie. When given an accurate evaluation function, the Minimax technique with the addition of $\alpha-\beta$ pruning showed extreme dominance and performed well. Not only did this approach play highly intelligently, but it also regularly selected moves within a single second when searching to a depth of 5. This approach also performed surprisingly well on the randomly generated boards. On reflection, the heuristics used are largely transferable between board designs, as mobility is equally as important and in most cases having control of stable edge discs continues to result in winning.
+The genetic algorithm shows promise, however it suffers from an exponential running time with regards to the size of the population and it is believed that a much larger population size is necessary for significant improvements. Thereafter, it is infeasible to perform the genetic algorithm at run time, but instead needs to be a method of pre-processing. Therefore it is not particularly applicable for use on spontaneous random boards, however it would be suitable to analyse a (large) sample of random boards and produce evaluation functions specific to each board.
+
+Whilst not a large focus of the project, the GUI that has been implemented works well, providing a clear, aesthetically pleasing interpretation of the board, with the addition of showing users the moves available to them, with a simple interface for users to select moves.
+
+The main weaknesses of the implemented algorithms lie with the Monte Carlo algorithm. Not only is its performance substantially weaker than that of Minimax, but it also uses significantly more memory. For it to play at a reasonably intelligent level the runtime is inordinately large, averaging over 10 seconds per move for programs using 50,000+ simulations. 
+
+%\subsubsection*{Points for Improvement}
+
+%A huge aspect of this project revolves around being able to efficiently search for moves in as short a time possible. On reflection there were several techniques that can be used to reduce processing time such as vectorisation and parallel programming. Had these been known when the project was started, implementations of various board mechanics would have been solved with a more appropriate approach, with a much larger emphasis on program efficiency. This would result in being able to perform more Monte Carlo simulations in a shorter period of time or to search to a deeper depth with the Minimax approach. Although if the Monte Carlo approach was to be used again, it would require significant improvements for it to be competitive with the Minimax approach. 
+
+\section{Conclusions}
+
+In summary, this project compares the relative strength of two different techniques to compete at Othello on both standard and pseudo-randomly generated boards. The Minimax based method competes at a strong level, playing intelligently whereas the Monte Carlo based technique struggles to stay competitive with the Minimax approach on all standard boards and pseudo-random boards alike, with randomly generated boards not having a significant affect on game-play. The genetic algorithm used displays potential but would benefit from running on a substantially larger scale in order to produce a greater performance enhancement.
+
+Whilst the project produces a high quality AI, there is still a large scope for further work with regards to improving the existing implementations and also taking the project in a new direction. Despite the Minimax approach having the strongest performance there are many ways in which it could be improved. Iterative Deepening is a technique that allows the AI to spend time more efficiently is reached. One variation of this technique known as Trappy Iterative Deepening attempts to identify and set traps that other players could fall in \cite{gordon2006trappy}. 
+
+%Another technique that could enhance the strength of the $\alpha$-$\beta$ approach involves modifying the order in which the nodes are searched in an attempt to search the strongest moves earlier on, resulting in much larger portions of the search tree being pruned out with the aim of increasing the maximum depth searched to.
+
+%If the Monte Carlo approach was adopted again it would require significant improvements. A more thorough investigation of Google's AlphaGO would give an insight about how to modify the implementation of the Monte Carlo technique to give it a chance of rivalling the Minimax based approach. Since the Monte Carlo approach is improved through running a larger number of simulations, huge care should be taken over the implementation to maximise the efficiency of operations used.
+
+There is also the opportunity for different adaptations of Othello to be investigated. The mechanics and GUI have been implemented using hexagonal tiles instead of square tiles. Given more time an AI could have been produced to play specifically on the hexagonal grid, which also could have the additional modification of randomly generated hexagonal grids to see if unplayable squares have a larger impact on hexagonal boards than square boards.
+
+With regards to the genetic algorithm there are several modifications that could be trialled. A thorough selection process could be employed such as a roulette wheel approach \cite{zhang2012equal} instead of selecting the population members with the greatest success, in an attempt to jump out of any local maxima. Due to the large number of tunable variables that the population members consist of, there is a huge scope for experimentation with crossover methods. As is the nature with genetic algorithms, it is often very hard to predict the relative success of different approaches and it is only possible to compare approaches after implementing them, but it leaves open endless opportunities for future work.
+
+\bibliography{projectpaper}
+
+\end{document}
